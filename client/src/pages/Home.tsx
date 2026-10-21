@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { StudyPlanTracker } from "@/components/StudyPlanTracker";
+import { AnalyticsConsent } from "@/components/AnalyticsConsent";
 
 type RouteKey = "explorar" | "programar" | "crear";
 
@@ -357,6 +358,7 @@ export default function Home() {
       <footer className="site-footer">
         <div className="footer-brand"><BrandMark /><span>Empieza con IA</span></div>
         <p>Una guía de decisiones para pasar de la curiosidad a tu primer proyecto.</p>
+        <AnalyticsConsent />
         <a href="https://github.com/belentani7/guia-primeros-pasos-ia" target="_blank" rel="noreferrer">Ver guía completa <GitBranch size={16} /></a>
       </footer>
     </div>
