@@ -29,6 +29,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { StudyPlanTracker } from "@/components/StudyPlanTracker";
 
 type RouteKey = "explorar" | "programar" | "crear";
 
@@ -348,6 +349,7 @@ export default function Home() {
               </article>
             ))}
           </div>
+          <StudyPlanTracker />
           <div className="plan-close"><Bot size={20} /><p>El objetivo no es usar más herramientas. Es aprender a elegir, medir y construir con criterio.</p></div>
         </section>
       </main>
