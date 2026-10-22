@@ -71,3 +71,33 @@ export function planAsMarkdown(done: readonly string[]): string {
     "",
   ].join("\n");
 }
+
+export interface PortablePlan {
+  kind: "empieza-con-ia-plan";
+  version: 1;
+  completed: string[];
+}
+
+export function planAsPortableJSON(done: readonly string[]): string {
+  // Export only known tasks; never serialize arbitrary browser localStorage.
+  const completed = PLAN_TASKS.filter(task => done.includes(task.id)).map(task => task.id);
+  return JSON.stringify({ kind: "empieza-con-ia-plan", version: 1, completed } satisfies PortablePlan, null, 2) + "\n";
+}
+
+export function restorePortablePlan(raw: string): string[] {
+  if (!raw || raw.length > 8192) throw new Error("Archivo de progreso demasiado grande");
+  let data: unknown;
+  try { data = JSON.parse(raw); }
+  catch { throw new Error("El archivo no contiene JSON válido"); }
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("Formato de progreso incorrecto");
+  }
+  const file = data as Partial<PortablePlan>;
+  if (file.kind !== "empieza-con-ia-plan" || file.version !== 1 ||
+      !Array.isArray(file.completed) || file.completed.length > PLAN_TASKS.length ||
+      file.completed.some(id => typeof id !== "string" || !allowed.has(id)) ||
+      new Set(file.completed).size !== file.completed.length) {
+    throw new Error("El archivo no corresponde a una ruta de estudio compatible");
+  }
+  return PLAN_TASKS.filter(task => file.completed!.includes(task.id)).map(task => task.id);
+}
