@@ -1,33 +1,47 @@
 import express from "express";
-import { createServer } from "http";
-import path from "path";
-import { fileURLToPath } from "url";
+import { createServer } from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function startServer() {
+export function createApp(staticPath: string) {
   const app = express();
-  const server = createServer(app);
+  app.disable("x-powered-by");
+  app.use(express.static(staticPath, { fallthrough: true }));
 
-  // Serve static files from dist/public in production
-  const staticPath =
-    process.env.NODE_ENV === "production"
-      ? path.resolve(__dirname, "public")
-      : path.resolve(__dirname, "..", "dist", "public");
-
-  app.use(express.static(staticPath));
-
-  // Handle client-side routing - serve index.html for all routes
-  app.get("*", (_req, res) => {
-    res.sendFile(path.join(staticPath, "index.html"));
+  // This application is a static educational guide, not a data API.
+  // Do not answer fake /api/* requests with HTTP 200 + the homepage.
+  app.get("/api/health", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ status: "ready", service: "guia-ia-web", mode: "static-guide" });
   });
+  app.use("/api", (_req, res) => res.status(404).json({ error: "API endpoint not available" }));
 
-  const port = process.env.PORT || 3000;
-
-  server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
+  // Only browser navigation requests should receive the SPA shell.
+  app.get("*", (req, res) => {
+    const acceptsHtml = req.accepts(["html", "json"]) === "html";
+    const hasExtension = path.extname(req.path) !== "";
+    if (!acceptsHtml || hasExtension) {
+      return res.status(404).send("Not found");
+    }
+    res.setHeader("Cache-Control", "no-cache");
+    return res.sendFile(path.join(staticPath, "index.html"));
   });
+  return app;
 }
 
-startServer().catch(console.error);
+async function startServer() {
+  const staticPath = process.env.NODE_ENV === "production"
+    ? path.resolve(__dirname, "public")
+    : path.resolve(__dirname, "..", "dist", "public");
+  const app = createApp(staticPath);
+  const server = createServer(app);
+  const port = Number(process.env.PORT || 3000);
+  server.listen(port, () => console.log("Guía IA server listening on port " + port));
+}
+
+if (process.env.NODE_ENV !== "test") {
+  startServer().catch(error => { console.error(error); process.exitCode = 1; });
+}
