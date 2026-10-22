@@ -6,6 +6,8 @@ import {
   parsePlan,
   planAsMarkdown,
   toggleTask,
+  planAsPortableJSON,
+  restorePortablePlan,
 } from "../client/src/lib/study-plan";
 
 describe("90-day guide content contract", () => {
@@ -54,4 +56,26 @@ describe("90-day guide content contract", () => {
     expect(md).toContain("**Avance guardado:** 17%");
     expect(md).toContain("## Fase 4");
   });
+
+  it("exports a minimal personal progress JSON without personal information", () => {
+    const done = [PLAN_TASKS[0].id, PLAN_TASKS[11].id, "unauthorized"];
+    const json = JSON.parse(planAsPortableJSON(done));
+    expect(json).toEqual({ kind: "empieza-con-ia-plan", version: 1,
+      completed: [PLAN_TASKS[0].id, PLAN_TASKS[11].id] });
+    expect(restorePortablePlan(planAsPortableJSON(done))).toEqual([
+      PLAN_TASKS[0].id, PLAN_TASKS[11].id,
+    ]);
+  });
+  it("rejects tampered, repeated, oversized, and incompatible progress backups", () => {
+    const invalid = [
+      "", "not-json", "x".repeat(8193), "[]", "null",
+      JSON.stringify({kind:"wrong",version:1,completed:[]}),
+      JSON.stringify({kind:"empieza-con-ia-plan",version:2,completed:[]}),
+      JSON.stringify({kind:"empieza-con-ia-plan",version:1,completed:["unknown"]}),
+      JSON.stringify({kind:"empieza-con-ia-plan",version:1,completed:[PLAN_TASKS[0].id,PLAN_TASKS[0].id]}),
+      JSON.stringify({kind:"empieza-con-ia-plan",version:1,completed:"all"}),
+    ];
+    for (const input of invalid) expect(() => restorePortablePlan(input)).toThrow();
+  });
+
 });
