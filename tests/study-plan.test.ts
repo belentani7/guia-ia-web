@@ -5,6 +5,8 @@ import {
   completionPercent,
   parsePlan,
   planAsMarkdown,
+  planBackup,
+  parsePlanBackup,
   toggleTask,
 } from "../client/src/lib/study-plan";
 
@@ -53,5 +55,24 @@ describe("90-day guide content contract", () => {
     expect(md).toContain("Comprobación:");
     expect(md).toContain("**Avance guardado:** 17%");
     expect(md).toContain("## Fase 4");
+  });
+
+  it("backs up and restores the known completed tasks without private identities", () => {
+    const ids = [PLAN_TASKS[0].id, PLAN_TASKS[11].id];
+    const backup = planBackup([...ids, ids[0], "tampered"]);
+    const parsed = JSON.parse(backup);
+    expect(parsed.format).toBe("empieza-con-ia-plan");
+    expect(parsed.completed).toEqual(ids);
+    expect(parsed.userProfile).toBeUndefined();
+    expect(parsePlanBackup(backup)).toEqual(ids);
+  });
+
+  it("rejects unknown task IDs, duplicates, corrupt JSON and unsupported versions", () => {
+    const bad = ["", "{", "[]", "{}", "x".repeat(20_001),
+      JSON.stringify({format:"empieza-con-ia-plan",version:2,completed:[]}),
+      JSON.stringify({format:"empieza-con-ia-plan",version:1,completed:["unknown"]}),
+      JSON.stringify({format:"empieza-con-ia-plan",version:1,completed:[PLAN_TASKS[0].id,PLAN_TASKS[0].id]}),
+    ];
+    for (const value of bad) expect(() => parsePlanBackup(value)).toThrow();
   });
 });
