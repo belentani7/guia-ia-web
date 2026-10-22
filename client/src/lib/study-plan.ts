@@ -71,3 +71,29 @@ export function planAsMarkdown(done: readonly string[]): string {
     "",
   ].join("\n");
 }
+
+
+/** Export a structured local backup instead of relying on non-importable Markdown. */
+export function planBackup(done: readonly string[]): string {
+  return JSON.stringify({
+    format: "empieza-con-ia-plan", version: 1,
+    completed: PLAN_TASKS.filter(task => done.includes(task.id)).map(task => task.id),
+  }, null, 2) + "\n";
+}
+
+export function parsePlanBackup(raw: string): string[] {
+  if (typeof raw !== "string" || raw.length > 20_000) throw new Error("Copia demasiado grande");
+  let value: unknown;
+  try { value = JSON.parse(raw); }
+  catch { throw new Error("Copia JSON no válida"); }
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Formato inválido");
+  const data = value as {format?:unknown;version?:unknown;completed?:unknown};
+  if (data.format !== "empieza-con-ia-plan" || data.version !== 1 ||
+      !Array.isArray(data.completed) || data.completed.length > PLAN_TASKS.length ||
+      !data.completed.every(id => typeof id === "string" && allowed.has(id)) ||
+      new Set(data.completed).size !== data.completed.length) {
+    throw new Error("Copia incompatible o tareas desconocidas");
+  }
+  const ids = data.completed as string[];
+  return PLAN_TASKS.filter(task => ids.includes(task.id)).map(task => task.id);
+}
