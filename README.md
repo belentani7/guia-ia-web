@@ -9,6 +9,7 @@ Una guía editorial y ahora **interactiva** para aprender a usar inteligencia ar
 - Recorrer el plan de 90 días con **12 acciones específicas** distribuidas en 4 fases, cada una con ejercicio, entrega y criterio de aceptación.
 - Marcar tareas terminadas y consultar porcentaje real en el navegador.
 - Descargar un archivo **Markdown** con tus 12 tareas y casillas completadas, sin crear cuenta ni conectar datos.
+- Guardar el progreso como **JSON compatible** y restaurarlo en otro navegador con confirmación, validación de 12 IDs, sin enviar datos a un servidor.
 - Habilitar voluntariamente medición Umami solo cuando el operador configure un endpoint HTTPS válido y el usuario pulse el consentimiento. Sin configuración o consentimiento, la página **no carga el script de medición**.
 
 Ninguna tarea otorga acreditación. Los presupuestos son rangos ilustrativos de aprendizaje, no precios actualizados de proveedores. La guía no envía automáticamente tu progreso a servicios externos.
