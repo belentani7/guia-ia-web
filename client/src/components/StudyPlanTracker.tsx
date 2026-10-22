@@ -1,5 +1,5 @@
-import { useSyncExternalStore } from "react";
-import { Check, Download, RotateCcw } from "lucide-react";
+import { useState, useSyncExternalStore } from "react";
+import { Check, Download, RotateCcw, Upload } from "lucide-react";
 import {
   PLAN_CHANGED,
   PLAN_STORAGE_KEY,
@@ -7,6 +7,8 @@ import {
   completionPercent,
   parsePlan,
   planAsMarkdown,
+  planAsPortableJSON,
+  restorePortablePlan,
   toggleTask,
 } from "@/lib/study-plan";
 
@@ -28,13 +30,16 @@ export function StudyPlanTracker() {
   const raw = useSyncExternalStore(subscribe, snapshot, () => "[]");
   const done = parsePlan(raw);
   const percentage = completionPercent(done);
+  const [restoreMessage, setRestoreMessage] = useState("");
 
-  const save = (next: string[]) => {
+  const save = (next: string[]): boolean => {
     try {
       window.localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(next));
       window.dispatchEvent(new Event(PLAN_CHANGED));
+      return true;
     } catch {
-      window.alert("No se pudo guardar el progreso. Puedes exportar la lista como Markdown.");
+      setRestoreMessage("No se pudo guardar: exporta una copia antes de salir.");
+      return false;
     }
   };
 
@@ -45,6 +50,30 @@ export function StudyPlanTracker() {
     link.download = "mi-ruta-ia-90-dias.md";
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const downloadJSON = () => {
+    const url = URL.createObjectURL(new Blob([planAsPortableJSON(done)], { type: "application/json;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "mi-ruta-ia-90-dias.json";
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const restoreJSON = async (file?: File) => {
+    if (!file) return;
+    if (file.size > 8192) {
+      setRestoreMessage("Archivo demasiado grande. La ruta no se ha modificado.");
+      return;
+    }
+    try {
+      const completed = restorePortablePlan(await file.text());
+      if (!window.confirm("¿Restaurar " + completed.length + " tareas completadas? Se sustituirá el progreso actual de este navegador.")) return;
+      if (save(completed)) setRestoreMessage("Progreso restaurado: " + completed.length + " tareas completadas.");
+    } catch {
+      setRestoreMessage("El archivo JSON no es compatible. El progreso no ha cambiado.");
+    }
   };
 
   const reset = () => {
@@ -89,10 +118,20 @@ export function StudyPlanTracker() {
           );
         })}
       </div>
+      {restoreMessage && <p role="status" aria-live="polite" className="mt-4 text-sm text-[#24465a]">{restoreMessage}</p>}
       <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-[#24465a]/15 pt-6">
         <p className="max-w-xl text-xs leading-6 text-[#58656c]">No se necesita registro. Solo se guarda el estado de las casillas en este dispositivo; no se envía a un servidor. Los días son orientativos y el aprendizaje no se certifica automáticamente.</p>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={download} className="inline-flex items-center gap-2 rounded-lg bg-[#1d5160] px-4 py-3 text-xs font-bold text-white hover:bg-[#143e4c]"><Download size={16} aria-hidden="true"/> Descargar mi ruta</button>
+          <button type="button" onClick={downloadJSON} className="inline-flex items-center gap-2 rounded-lg border border-[#255361]/25 bg-white px-4 py-3 text-xs font-bold text-[#1d5160] hover:bg-[#f2f5f2]"><Download size={16} aria-hidden="true"/> Copia JSON</button>
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#255361]/25 bg-white px-4 py-3 text-xs font-bold text-[#1d5160] hover:bg-[#f2f5f2] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#276654]">
+            <Upload size={16} aria-hidden="true"/> Restaurar JSON
+            <input aria-label="Restaurar progreso desde JSON" type="file" accept="application/json,.json" className="sr-only" onChange={event => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = "";
+              void restoreJSON(file);
+            }} />
+          </label>
           <button type="button" onClick={reset} className="inline-flex items-center gap-2 rounded-lg border border-[#255361]/25 bg-white px-4 py-3 text-xs font-bold text-[#1d5160] hover:bg-[#f2f5f2]"><RotateCcw size={16} aria-hidden="true"/> Reiniciar</button>
         </div>
       </div>
