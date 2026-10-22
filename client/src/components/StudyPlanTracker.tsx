@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { Check, Download, RotateCcw } from "lucide-react";
+import { Check, Download, RotateCcw, Upload } from "lucide-react";
 import {
   PLAN_CHANGED,
   PLAN_STORAGE_KEY,
@@ -7,6 +7,8 @@ import {
   completionPercent,
   parsePlan,
   planAsMarkdown,
+  planBackup,
+  parsePlanBackup,
   toggleTask,
 } from "@/lib/study-plan";
 
@@ -47,8 +49,32 @@ export function StudyPlanTracker() {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
+  const downloadBackup = () => {
+    const url = URL.createObjectURL(new Blob([planBackup(done)], {type:"application/json;charset=utf-8"}));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "mi-ruta-ia-90-dias.json";
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const importBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+    if (file.size > 20_000) {
+      window.alert("La copia supera 20 KB."); return;
+    }
+    try {
+      const imported = parsePlanBackup(await file.text());
+      if (window.confirm("¿Sustituir el progreso actual por " + imported.length + " tareas de esta copia?")) save(imported);
+    } catch {
+      window.alert("La copia no es válida: no se ha modificado tu progreso.");
+    }
+  };
+
   const reset = () => {
-    if (!window.confirm("¿Borrar las tareas completadas de esta guía? No se pueden recuperar sin tu archivo exportado.")) return;
+    if (!window.confirm("¿Borrar las tareas completadas de esta guía? Para recuperarlas necesitarás una copia JSON.")) return;
     save([]);
   };
 
@@ -93,6 +119,9 @@ export function StudyPlanTracker() {
         <p className="max-w-xl text-xs leading-6 text-[#58656c]">No se necesita registro. Solo se guarda el estado de las casillas en este dispositivo; no se envía a un servidor. Los días son orientativos y el aprendizaje no se certifica automáticamente.</p>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={download} className="inline-flex items-center gap-2 rounded-lg bg-[#1d5160] px-4 py-3 text-xs font-bold text-white hover:bg-[#143e4c]"><Download size={16} aria-hidden="true"/> Descargar mi ruta</button>
+          <button type="button" onClick={downloadBackup} className="inline-flex items-center gap-2 rounded-lg border border-[#255361]/25 bg-white px-4 py-3 text-xs font-bold text-[#1d5160] hover:bg-[#f2f5f2]"><Download size={16} aria-hidden="true"/> Copia JSON</button>
+          <label htmlFor="plan-backup-file" className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#255361]/25 bg-white px-4 py-3 text-xs font-bold text-[#1d5160] hover:bg-[#f2f5f2]"><Upload size={16} aria-hidden="true"/> Importar progreso</label>
+          <input id="plan-backup-file" aria-label="Seleccionar copia JSON del progreso" className="sr-only" type="file" accept=".json,application/json" onChange={importBackup}/>
           <button type="button" onClick={reset} className="inline-flex items-center gap-2 rounded-lg border border-[#255361]/25 bg-white px-4 py-3 text-xs font-bold text-[#1d5160] hover:bg-[#f2f5f2]"><RotateCcw size={16} aria-hidden="true"/> Reiniciar</button>
         </div>
       </div>
