@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -33,6 +33,24 @@ test("HTTP health, SPA navigation and missing routes use truthful status codes",
       return { response, body: await response.text() };
     }
 
+    // Node fetch always sends Sec-Fetch-Mode: cors, even if the caller
+    // requests navigate. Use node:http to model a real browser navigation.
+    async function navigate(route) {
+      return await new Promise((resolve, reject) => {
+        const req = httpRequest(base + route, {
+          headers: { Accept: "text/html", "Sec-Fetch-Mode": "navigate" },
+        }, response => {
+          let body = "";
+          response.setEncoding("utf8");
+          response.on("data", chunk => { body += chunk; });
+          response.on("end", () => resolve({ response, body }));
+          response.on("error", reject);
+        });
+        req.on("error", reject);
+        req.end();
+      });
+    }
+
     await t.test("health endpoint returns real JSON and disables caching", async () => {
       const { response, body } = await request("/api/health", { Accept: "application/json" });
       assert.equal(response.status, 200);
@@ -61,9 +79,9 @@ test("HTTP health, SPA navigation and missing routes use truthful status codes",
       assert.equal(response.status, 404);
     });
     await t.test("real HTML navigation retains SPA fallback", async () => {
-      const { response, body } = await request("/plan/day-1", { Accept: "text/html", "Sec-Fetch-Mode": "navigate" });
-      assert.equal(response.status, 200);
-      assert.equal(response.headers.get("cache-control"), "no-cache");
+      const { response, body } = await navigate("/plan/day-1");
+      assert.equal(response.statusCode, 200);
+      assert.equal(response.headers["cache-control"], "no-cache");
       assert.match(body, /Empieza con IA/);
     });
     await t.test("existing static assets are served", async () => {
