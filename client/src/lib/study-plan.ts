@@ -37,7 +37,7 @@ export function parsePlan(raw: string | null): string[] {
   try {
     const data: unknown = JSON.parse(raw);
     if (!Array.isArray(data)) return [];
-    return [...new Set(data.filter((id): id is string => typeof id === "string" && allowed.has(id)))];
+    return Array.from(new Set(data.filter((id): id is string => typeof id === "string" && allowed.has(id))));
   } catch { return []; }
 }
 

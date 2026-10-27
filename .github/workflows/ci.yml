@@ -14,9 +14,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      # package.json packageManager pins pnpm; declaring a second version breaks setup.
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.4.1
           run_install: false
       - uses: actions/setup-node@v4
         with:
@@ -26,6 +26,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Interactive course-plan tests
         run: pnpm test
+      - name: HTTP routing contract regression
+        run: pnpm run test:server
       - name: Strict TypeScript check
         run: pnpm run check
       - name: Full front and server build
