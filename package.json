@@ -11,8 +11,8 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run tests/study-plan.test.ts",
-    "verify": "pnpm test && pnpm run check && pnpm run build",
-    "test:server": "node --test tests/server-contract.test.mjs"
+    "verify": "pnpm test && pnpm run test:server && pnpm run check && pnpm run build",
+    "test:server": "tsx --test tests/server-contract.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

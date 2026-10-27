@@ -21,9 +21,14 @@ export function createApp(staticPath: string) {
 
   // Only browser navigation requests should receive the SPA shell.
   app.get("*", (req, res) => {
-    const acceptsHtml = req.accepts(["html", "json"]) === "html";
+    // Accept: */* (the fetch() default) is not a browser navigation.
+    // Respect Sec-Fetch-Mode when supplied to avoid SPA 200s for fetch/XHR.
+    const accept = req.get("accept") ?? "";
+    const acceptsHtml = /(?:^|,)\s*text\/html(?:\s*;|,|$)/i.test(accept) && req.accepts("html") === "html";
+    const fetchMode = req.get("sec-fetch-mode");
+    const isNavigation = fetchMode === undefined || fetchMode === "navigate";
     const hasExtension = path.extname(req.path) !== "";
-    if (!acceptsHtml || hasExtension) {
+    if (!acceptsHtml || !isNavigation || hasExtension) {
       return res.status(404).send("Not found");
     }
     res.setHeader("Cache-Control", "no-cache");
