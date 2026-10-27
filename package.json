@@ -10,7 +10,7 @@
     "preview": "vite preview --host",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
-    "test": "vitest run tests/study-plan.test.ts",
+    "test": "vitest run --root . tests/study-plan.test.ts",
     "verify": "pnpm test && pnpm run test:server && pnpm run check && pnpm run build",
     "test:server": "tsx --test tests/server-contract.test.mjs"
   },
